@@ -1,0 +1,31 @@
+host-ip: 10.169.50.173
+
+server:
+  port: 8001
+
+spring:
+  application:
+    name: comprehensive-application
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${host-ip}:3306/link?useUnicode=true&characterEncoding=UTF-8&rewriteBatchedStatements=true&allowMultiQueries=true&serverTimezone=Asia/Shanghai
+    hikari:
+      minimum-idle: 5
+      maximum-pool-size: 20
+      idle-timeout: 30000
+      pool-name: SpringBootJPAHikariCP
+      max-lifetime: 2000000
+      connection-timeout: 30000
+    username: root
+    password: Aaa3281265
+  data:
+    redis:
+      host: ${host-ip}
+      port: 6379
+      password: Aaa3281265
+      database: 7
+  cloud:
+    nacos:
+      discovery:
+        server-addr: ${host-ip}:8848
+
