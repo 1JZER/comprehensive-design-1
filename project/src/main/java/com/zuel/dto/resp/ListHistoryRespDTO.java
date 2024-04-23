@@ -7,5 +7,5 @@ import java.util.List;
 
 @Data
 public class ListHistoryRespDTO {
-    List<History> historyRespList;
+    List<History> historyList;
 }

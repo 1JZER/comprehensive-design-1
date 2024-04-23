@@ -66,6 +66,7 @@ public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> i
             // 文件入库
             HistoryDO historyDO = new HistoryDO();
             historyDO.setUsername(UserContext.getUsername())
+                    .setTopic("历史记录n")
                     .setImgName(fileName);     // TODO: 获取主题
             save(historyDO);
 
@@ -87,7 +88,7 @@ public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> i
         List<HistoryDO> histories = historyMapper.selectList(lambdaQueryWrapper);
         List<History> res = histories.stream().map((item) -> new History().setTopic(item.getTopic())).toList();
         ListHistoryRespDTO listHistoryRespDTO = new ListHistoryRespDTO();
-        listHistoryRespDTO.setHistoryRespList(res);
+        listHistoryRespDTO.setHistoryList(res);
         return Results.success(listHistoryRespDTO);
     }
 

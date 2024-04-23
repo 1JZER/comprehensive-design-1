@@ -11,5 +11,14 @@ export default {
                 responseType: 'blob'
             }
         )
-    }
+    },
+    // 查询分组集合
+    listHistory(data) {
+        return http({
+            url: '/listHistory',
+            method: 'get',
+            params: data
+        })
+    },
+
 }

@@ -63,21 +63,6 @@
               <template v-slot:prepend> 密<span class="second-font">码</span> </template>
             </el-input>
           </el-form-item>
-          <!-- 验证码 -->
-          <!-- <el-form-item prop="vertify_code">
-            <el-input
-              v-model="loginForm.vertify_code"
-              placeholder="验证码"
-              prefix-icon="el-icon-key"
-              clearable
-            >
-              <template v-slot:append>
-                <div class="login-code" @click="refreshCode" title="看不清？点击切换">
-                  <vertify-code :identifyCode="loginIdentifyCode"></vertify-code>
-                </div>
-              </template>
-            </el-input>
-          </el-form-item> -->
           <div class="btn-gourp">
             <div></div>
             <div>

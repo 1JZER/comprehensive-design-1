@@ -10,14 +10,16 @@
           <img src="@/assets/svg/添加.svg" alt=""/>
         </div>
       </div>
+
+
       <!-- 拖动选项 -->
       <ul class="sortOptions">
-        <li v-for="(item, index) in editableTabs" :key="item.gid">
+        <li v-for="(item, index) in historyList" :key="index">
           <div class="item-box flex-box hover-box" :class="{ selectedItem: selectedIndex === index }"
                @click="changeSelectIndex(index)">
             <div style="display: flex">
               <img src="@/assets/svg/移动竖.svg" width="13" style="margin-right: 3px" alt=""/>
-              <span class="over-text">{{ item.name }}</span>
+              <span class="over-text">{{ item.topic}}</span>
             </div>
             <div class="flex-box">
               <!-- 图标 -->
@@ -48,6 +50,8 @@
           </div>
         </li>
       </ul>
+
+
       <div class="recycle-bin">
         <!-- 当selectIndex等于-1时代表选中的是回收站 -->
         <div class="recycle-box hover-box" :class="{ selectedItem: selectedIndex === -1 }" @click="recycleBin">
@@ -76,7 +80,7 @@
           <!-- 数据为空时展示的内容 -->
           <template #empty>
             <div style="height: 60vh; display: flex; align-items: center; justify-content: center">
-              <img  :src="imageUrl" alt="描述信息">
+              <img :src="imageUrl" alt="描述信息">
             </div>
           </template>
         </el-table>
@@ -97,7 +101,6 @@ import defaultImg from '@/assets/png/短链默认图标.png'
 const nums = ref(0)
 const favicon1 = ref()
 const originUrl1 = ref()
-const orderIndex = ref(0)
 
 const {proxy} = getCurrentInstance()
 const API = proxy.$API
@@ -105,33 +108,19 @@ const chartsInfoRef = ref()
 const chartsInfoTitle = ref()
 const chartsInfo = ref()
 const tableInfo = ref()
-const createLink1Ref = ref()
-const createLink2Ref = ref()
 let selectedIndex = ref(0)
 const editableTabs = ref([])
-// 添加弹窗关闭后重新请求一下页面数据
-const afterAddLink = () => {
-  setTimeout(() => {
-    getGroupInfo(queryPage) // 重新请求数据
-    // 按钮重新恢复可点击的样式
-    document.querySelector('.addButton') && document.querySelector('.addButton').blur()
-  }, 0)
-  if (createLink1Ref.value) {
-    createLink1Ref.value.initFormData()
-  }
-  if (createLink2Ref.value) {
-    createLink2Ref.value.initFormData()
-  }
-  if (editLinkRef.value) {
-    editLinkRef.value.initFormData()
-  }
-}
+const historyList = ref([])
+
+
 const statsFormData = reactive({
   endDate: getTodayFormatDate(),
   startDate: getLastWeekFormatDate(),
   size: 10,
   current: 1
 })
+
+
 const initStatsFormData = () => {
   statsFormData.endDate = getTodayFormatDate()
   statsFormData.startDate = getLastWeekFormatDate()
@@ -185,55 +174,6 @@ const chartsVisible = async (rowInfo, dateList) => {
 }
 
 
-// 图表修改时间后重新请求数
-const changeTimeData = async (rowInfo, dateList) => {
-  const {fullShortUrl, gid} = rowInfo
-  visitLink.fullShortUrl = fullShortUrl
-  visitLink.gid = gid
-  if (!dateList) {
-    initStatsFormData()
-  } else {
-    // 否则就按照传过来的数据去请求数据
-    statsFormData.startDate = dateList?.[0] + ' 00:00:00'
-    statsFormData.endDate = dateList?.[1] + ' 23:59:59'
-  }
-  let res = null
-  let tableRes = null
-  // 判断是分组还是单个短链接
-  if (isGroup.value) {
-    res = await API.group.queryGroupStats({...statsFormData, fullShortUrl, gid})
-    tableRes = await API.group.queryGroupTable({gid, ...statsFormData})
-  } else {
-    res = await API.smallLinkPage.queryLinkStats({...statsFormData, fullShortUrl, gid})
-    tableRes = await API.smallLinkPage.queryLinkTable({gid, fullShortUrl, ...statsFormData})
-  }
-  tableInfo.value = tableRes
-  chartsInfo.value = res?.data?.data
-  console.log(res?.data?.data)
-}
-// 修改时间
-const changeTime = (dateList) => {
-  console.log('修改了时间')
-  changeTimeData(visitLink, dateList)
-}
-// 修改页码信息
-const changePage = async (page) => {
-  const {current, size} = page
-  statsFormData.current = current ?? 1
-  statsFormData.size = size ?? 10
-  let tableRes = null
-  // 判断是分组还是单个短链接
-  if (isGroup.value) {
-    tableRes = await API.group.queryGroupTable({gid: tableGid.value, ...statsFormData})
-  } else {
-    tableRes = await API.smallLinkPage.queryLinkTable({
-      gid: tableGid.value,
-      fullShortUrl: tableFullShortUrl.value,
-      ...statsFormData
-    })
-  }
-  tableInfo.value = tableRes
-}
 // 将原来的数据转化为拖拽后传给后端的数据格式
 const transformGroupData = (oldIndex, newIndex) => {
   // 相当于直接对展示数据进行修改
@@ -307,6 +247,8 @@ const pageParams = reactive({
   size: 15,
   orderTag: null
 })
+const sideHistoryList = ref([])
+
 watch(
     () => pageParams.orderTag,
     (nV) => {
@@ -315,6 +257,8 @@ watch(
     }
 )
 const totalNums = ref(0)
+
+
 // 数据变化后更新当前页面
 const queryPage = async () => {
   pageParams.gid = editableTabs.value?.[selectedIndex.value]?.gid
@@ -329,13 +273,19 @@ const queryPage = async () => {
   }
 }
 
-const handleSizeChange = () => {
-  !isRecycleBin.value ? queryPage() : queryRecycleBinPage()
+
+// 获取历史信息
+const getHistoryInfo = async (fn) => {
+  const res = await API.CVRequestHandler.listHistory()
+  historyList.value = res.data?.data.historyList
+  console.log("我的日志")
+  console.log(historyList.value)
+
+  fn && fn()
 }
 
-const handleCurrentChange = () => {
-  !isRecycleBin.value ? queryPage() : queryRecycleBinPage()
-}
+
+getHistoryInfo(queryPage)
 
 // 获取分组信息，更新页面的分组模块
 const getGroupInfo = async (fn) => {
@@ -343,7 +293,9 @@ const getGroupInfo = async (fn) => {
   editableTabs.value = res.data?.data?.reverse()
   fn && fn()
 }
-getGroupInfo(queryPage)
+
+
+// getGroupInfo(queryPage)
 
 const updatePage = () => {
   getGroupInfo(queryPage)
@@ -399,6 +351,7 @@ const addGroup = async () => {
   isAddGroup.value = false
   addGroupLoading.value = false
 }
+
 // 删除分组
 const deleteGroup = async (gid) => {
   const res = await API.group.deleteGroup({gid})
@@ -414,28 +367,12 @@ const deleteGroup = async (gid) => {
 const isEditGroup = ref(false)
 const editGroupName = ref()
 const editGid = ref('')
-const editGroupLoading = ref(false)
 // 点击编辑按钮，出现编辑弹框
 const showEditGroup = (gid, name) => {
   editGid.value = gid
   editGroupName.value = name
   isEditGroup.value = true
 }
-// 编辑分组标题
-const editGroup = async () => {
-  editGroupLoading.value = true
-  const res = await API.group.editGroup({gid: editGid.value, name: editGroupName.value})
-  if (res.data.success) {
-    ElMessage.success('编辑成功')
-    getGroupInfo(queryPage)
-  } else {
-    ElMessage.error('编辑失败')
-  }
-  isEditGroup.value = false
-  editGroupLoading.value = false
-}
-
-
 const imageUrl = ref('');
 
 
@@ -463,97 +400,7 @@ const handleFileUpload = async (event) => {
 }
 
 
-// 创建短链
-const isAddSmallLink = ref(false)
-const isAddSmallLinks = ref(false)
 
-// 关闭新建短链接弹窗
-const addLink = () => {
-  isAddSmallLink.value = false
-  isAddSmallLinks.value = false
-}
-// 新建批量新建短链接弹窗
-const cancelAddLink = () => {
-  isAddSmallLink.value = false
-  isAddSmallLinks.value = false
-}
-const getImgUrl = (url) => {
-  return url ?? defaultImg
-}
-// 判断链接是否过期
-const isExpire = (validDate) => {
-  if (validDate) {
-    const date = new Date(validDate).getTime()
-    return new Date().getTime() < date
-  }
-}
-// 复制链接
-const copyUrl = (url) => {
-  let eInput = document.createElement('input')
-  eInput.value = url
-  document.body.appendChild(eInput)
-  eInput.select()
-  let copyText = document.execCommand('Copy')
-  eInput.style.display = 'none'
-  if (copyText) {
-    // console.log(eInput.value)
-    ElMessage.success('链接复制成功!')
-  }
-}
-// 修改短链信息
-const isEditLink = ref(false) // 是否展示编辑弹框
-const editLinkRef = ref()
-const editData = ref() // 编辑弹框的数据
-const editLink = (data) => {
-  // console.log('data: ---' + data)
-  editData.value = data
-  isEditLink.value = true
-}
-// 隐藏弹框
-const coverEditLink = () => {
-  isEditLink.value = false
-}
-// 移动到回收站
-const toRecycleBin = (data) => {
-  const {gid, fullShortUrl} = data
-  API.smallLinkPage
-      .toRecycleBin({gid, fullShortUrl})
-      .then((res) => {
-        ElMessage.success('删除成功')
-        getGroupInfo(queryPage)
-      })
-      .catch((reason) => {
-        ElMessage.error('删除失败')
-      })
-}
-// 回收站中恢复
-const recoverLink = (data) => {
-  const {gid, fullShortUrl} = data
-  API.smallLinkPage
-      .recoverLink({gid, fullShortUrl})
-      .then((res) => {
-        ElMessage.success('恢复成功')
-        queryRecycleBinPage()
-        // getGroupInfo(queryPage)
-        getGroupInfo()         //修复短链接恢复会报系统执行出错的问题
-      })
-      .catch((reason) => {
-        ElMessage.error('恢复失败')
-      })
-}
-// 从回收站中删除
-const removeLink = (data) => {
-  const {gid, fullShortUrl} = data
-  API.smallLinkPage
-      .removeLink({gid, fullShortUrl})
-      .then((res) => {
-        ElMessage.success('删除成功')
-        queryRecycleBinPage()
-      })
-      .catch((reason) => {
-        ElMessage.error('删除失败')
-      })
-}
 </script>
 
 <style lang="scss" scoped>
