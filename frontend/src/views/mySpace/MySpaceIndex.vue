@@ -6,9 +6,6 @@
         <div>
           历史记录<span> 共{{ editableTabs?.length }}个</span>
         </div>
-        <div class="hover-box" style="width: 24px" @click="showAddGroup">
-          <img src="@/assets/svg/添加.svg" alt=""/>
-        </div>
       </div>
 
 
@@ -19,33 +16,7 @@
                @click="changeSelectIndex(index)">
             <div style="display: flex">
               <img src="@/assets/svg/移动竖.svg" width="13" style="margin-right: 3px" alt=""/>
-              <span class="over-text">{{ item.topic}}</span>
-            </div>
-            <div class="flex-box">
-              <!-- 图标 -->
-              <el-tooltip show-after="500" class="box-item" effect="dark" :content="'查看图表'" placement="bottom-end">
-                <!-- 传group是为了表示这个请求是查询分组图表数据 -->
-                <el-icon v-if="!(item.shortLinkCount === 0 || item.shortLinkCount === null)" class="edit"
-                         :class="{ zero: item.shortLinkCount === 0 }"
-                         @click="chartsVisible({ describe: item.name, gid: item.gid, group: true })">
-                  <Histogram/>
-                </el-icon>
-              </el-tooltip>
-              <!-- 编辑按钮 -->
-              <el-dropdown>
-                <div class="block">
-                  <el-icon class="edit" v-if="item.title !== '默认分组'">
-                    <Tools/>
-                  </el-icon>
-                </div>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item @click="showEditGroup(item.gid, item.name)">编辑</el-dropdown-item>
-                    <el-dropdown-item @click="deleteGroup(item.gid)">删除</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
-              <span class="item-length">{{ item.shortLinkCount ?? 0 }}</span>
+              <span class="over-text">{{ item.topic }}</span>
             </div>
           </div>
         </li>
@@ -99,15 +70,9 @@ import defaultImg from '@/assets/png/短链默认图标.png'
 
 // 查看图表的时候传过去展示的，没什么用
 const nums = ref(0)
-const favicon1 = ref()
-const originUrl1 = ref()
 
 const {proxy} = getCurrentInstance()
 const API = proxy.$API
-const chartsInfoRef = ref()
-const chartsInfoTitle = ref()
-const chartsInfo = ref()
-const tableInfo = ref()
 let selectedIndex = ref(0)
 const editableTabs = ref([])
 const historyList = ref([])
@@ -121,57 +86,6 @@ const statsFormData = reactive({
 })
 
 
-const initStatsFormData = () => {
-  statsFormData.endDate = getTodayFormatDate()
-  statsFormData.startDate = getLastWeekFormatDate()
-}
-const visitLink = {
-  fullShortUrl: '',
-  gid: ''
-}
-
-// 打开的图表是分组（true为分组）的还是单链的
-const isGroup = ref(false)
-const tableFullShortUrl = ref()
-const tableGid = ref()
-
-
-// 点击查看数据图表
-const chartsVisible = async (rowInfo, dateList) => {
-  chartsInfoTitle.value = rowInfo?.describe
-  // 如果传入的group为true的话就查询分组的数据，如果没传就查询单链的数据
-  const {fullShortUrl, gid, group, originUrl, favicon} = rowInfo
-  originUrl1.value = originUrl
-  favicon1.value = favicon
-  isGroup.value = group
-  tableFullShortUrl.value = fullShortUrl
-  tableGid.value = gid
-  // 后续修改时间的时候拿去用
-  visitLink.fullShortUrl = fullShortUrl
-  visitLink.gid = gid
-  chartsInfoRef?.value.isVisible()
-  // 如果没有时间传值，就默认查找过去一周的数据
-  if (!dateList) {
-    initStatsFormData()
-  } else {
-    // 否则就按照传过来的数据去请求数据
-    statsFormData.startDate = dateList?.[0] + ' 00:00:00'
-    statsFormData.endDate = dateList?.[1] + ' 23:59:59'
-  }
-  let res = null
-  let tableRes = null
-  if (group) {
-    res = await API.group.queryGroupStats({...statsFormData, fullShortUrl, gid})
-    tableRes = await API.group.queryGroupTable({gid, ...statsFormData})
-  } else {
-    res = await API.smallLinkPage.queryLinkStats({...statsFormData, fullShortUrl, gid})
-    tableRes = await API.smallLinkPage.queryLinkTable({gid, fullShortUrl, ...statsFormData})
-  }
-  tableInfo.value = tableRes
-  chartsInfo.value = res?.data?.data
-  console.log(res?.data?.data)
-  // debugger
-}
 
 
 // 将原来的数据转化为拖拽后传给后端的数据格式
@@ -247,7 +161,6 @@ const pageParams = reactive({
   size: 15,
   orderTag: null
 })
-const sideHistoryList = ref([])
 
 watch(
     () => pageParams.orderTag,
@@ -337,41 +250,6 @@ const addGroupLoading = ref(false)
 const showAddGroup = () => {
   newGroupName.value = ''
   isAddGroup.value = true
-}
-// 添加分组
-const addGroup = async () => {
-  addGroupLoading.value = true
-  const res1 = await API.group.addGroup({name: newGroupName.value})
-  if (res1?.data.success) {
-    ElMessage.success('添加成功')
-    getGroupInfo(queryPage)
-  } else {
-    ElMessage.error(res1?.data.message)
-  }
-  isAddGroup.value = false
-  addGroupLoading.value = false
-}
-
-// 删除分组
-const deleteGroup = async (gid) => {
-  const res = await API.group.deleteGroup({gid})
-  selectedIndex.value = 0
-  if (res.data.success) {
-    ElMessage.success('删除成功')
-    getGroupInfo(queryPage)
-  } else {
-    ElMessage.error('删除失败')
-  }
-}
-// 编辑分组
-const isEditGroup = ref(false)
-const editGroupName = ref()
-const editGid = ref('')
-// 点击编辑按钮，出现编辑弹框
-const showEditGroup = (gid, name) => {
-  editGid.value = gid
-  editGroupName.value = name
-  isEditGroup.value = true
 }
 const imageUrl = ref('');
 
