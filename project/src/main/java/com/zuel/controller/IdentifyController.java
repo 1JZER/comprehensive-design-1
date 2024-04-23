@@ -19,7 +19,7 @@ public class IdentifyController {
 
     // 直接返回图片流
     @PostMapping("/api/comprehensive-design/admin/v1/doIdentify")
-    public ResponseEntity<Resource> identify(@RequestParam("file") MultipartFile file) throws IOException {
+    public ResponseEntity<Resource> identify(@RequestParam("file") MultipartFile file) {
         return identifyService.identify(file);
     }
 }
