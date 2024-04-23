@@ -4,16 +4,14 @@
     <div class="options-box">
       <div class="option-title flex-box">
         <div>
-          历史记录<span> 共{{ editableTabs?.length }}个</span>
+          历史记录<span> 共{{ historyList?.length }}个</span>
         </div>
       </div>
-
-
-      <!-- 拖动选项 -->
+      <!-- 左侧边栏内容 -->
       <ul class="sortOptions">
         <li v-for="(item, index) in historyList" :key="index">
           <div class="item-box flex-box hover-box" :class="{ selectedItem: selectedIndex === index }"
-               @click="changeSelectIndex(index)">
+               @click="queryHistory(item.img_name, index)">
             <div style="display: flex">
               <img src="@/assets/svg/移动竖.svg" width="13" style="margin-right: 3px" alt=""/>
               <span class="over-text">{{ item.topic }}</span>
@@ -21,17 +19,6 @@
           </div>
         </li>
       </ul>
-
-
-      <div class="recycle-bin">
-        <!-- 当selectIndex等于-1时代表选中的是回收站 -->
-        <div class="recycle-box hover-box" :class="{ selectedItem: selectedIndex === -1 }" @click="recycleBin">
-          回收站
-          <el-icon style="margin-left: 5px; font-size: 20px">
-            <Delete/>
-          </el-icon>
-        </div>
-      </div>
     </div>
 
     <!-- 主要数据展示区域 -->
@@ -64,9 +51,7 @@
 <script setup>
 import {getCurrentInstance, onMounted, reactive, ref, watch} from 'vue'
 import Sortable from 'sortablejs'
-import {getLastWeekFormatDate, getTodayFormatDate} from '@/utils/plugins.js'
 import {ElMessage} from 'element-plus'
-import defaultImg from '@/assets/png/短链默认图标.png'
 
 // 查看图表的时候传过去展示的，没什么用
 const nums = ref(0)
@@ -76,16 +61,6 @@ const API = proxy.$API
 let selectedIndex = ref(0)
 const editableTabs = ref([])
 const historyList = ref([])
-
-
-const statsFormData = reactive({
-  endDate: getTodayFormatDate(),
-  startDate: getLastWeekFormatDate(),
-  size: 10,
-  current: 1
-})
-
-
 
 
 // 将原来的数据转化为拖拽后传给后端的数据格式
@@ -147,7 +122,7 @@ watch(
     (newValue) => {
       // -1为回收站，不需要重新请求正常页面数据
       if (newValue !== -1 && newValue !== -2) {
-        queryPage()
+        getHistoryInfo()
       }
     }
 )
@@ -188,31 +163,29 @@ const queryPage = async () => {
 
 
 // 获取历史信息
-const getHistoryInfo = async (fn) => {
+const getHistoryInfo = async () => {
   const res = await API.CVRequestHandler.listHistory()
   historyList.value = res.data?.data.historyList
-  console.log("我的日志")
-  console.log(historyList.value)
-
-  fn && fn()
+  if (res?.data.success) {
+    tableData.value = res.data?.data?.records
+    totalNums.value = +res.data?.data?.total
+  } else {
+    ElMessage.error(res?.data.message)
+  }
 }
 
 
-getHistoryInfo(queryPage)
+getHistoryInfo()
 
-// 获取分组信息，更新页面的分组模块
-const getGroupInfo = async (fn) => {
-  const res = await API.group.queryGroup()
-  editableTabs.value = res.data?.data?.reverse()
-  fn && fn()
+
+const queryHistory = async (fileName, index) => {
+  console.log('切换到历史记录' + fileName);
+  const response = await API.CVRequestHandler.queryHistory({fileName});
+  imageUrl.value = URL.createObjectURL(response.data);
+  selectedIndex.value = index
+  isRecycleBin.value = false
 }
 
-
-// getGroupInfo(queryPage)
-
-const updatePage = () => {
-  getGroupInfo(queryPage)
-}
 
 // 是否展示回收站相关的组件
 const isRecycleBin = ref(false)
@@ -236,21 +209,9 @@ const recycleBin = () => {
   // 点击回收站相关的请求
   queryRecycleBinPage()
 }
-// 点击分组中的选项
-const changeSelectIndex = (index) => {
-  selectedIndex.value = index
-  isRecycleBin.value = false
-  // 对应分组的数据请求
-}
+
+
 // 添加分组相关
-const isAddGroup = ref(false)
-const newGroupName = ref()
-const addGroupLoading = ref(false)
-// 展示添加分组弹框
-const showAddGroup = () => {
-  newGroupName.value = ''
-  isAddGroup.value = true
-}
 const imageUrl = ref('');
 
 
@@ -267,7 +228,6 @@ const handleFileUpload = async (event) => {
     // 处理上传成功后的逻辑
     console.log("上传成功", response.data);
     imageUrl.value = URL.createObjectURL(response.data); // 直接使用 response.data，它是一个 Blob 对象
-
   } catch (error) {
     console.error("上传失败", error);
     // 处理上传失败后的逻辑
@@ -276,7 +236,6 @@ const handleFileUpload = async (event) => {
     fileInput.value = '';
   }
 }
-
 
 
 </script>

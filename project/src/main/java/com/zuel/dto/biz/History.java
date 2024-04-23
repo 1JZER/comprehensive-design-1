@@ -7,4 +7,5 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class History {
     private String topic;
+    private String img_name;
 }

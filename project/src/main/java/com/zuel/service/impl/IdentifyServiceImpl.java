@@ -30,6 +30,7 @@ import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -86,10 +87,25 @@ public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> i
                 .eq(HistoryDO::getUsername, UserContext.getUsername())
                 .orderByDesc(HistoryDO::getCreateTime);
         List<HistoryDO> histories = historyMapper.selectList(lambdaQueryWrapper);
-        List<History> res = histories.stream().map((item) -> new History().setTopic(item.getTopic())).toList();
+        List<History> res = histories.stream().map((item) -> new History().setTopic(item.getTopic()).setImg_name(item.getImgName())).toList();
         ListHistoryRespDTO listHistoryRespDTO = new ListHistoryRespDTO();
         listHistoryRespDTO.setHistoryList(res);
         return Results.success(listHistoryRespDTO);
+    }
+
+    @Override
+    public ResponseEntity<Resource> queryHistory(String fileName) {
+        // TODO 请求参数验证
+        File outoutFile = new File(outputImagePath + "/" + fileName);
+        InputStreamResource resource = null;
+        try {
+            resource = new InputStreamResource(new FileInputStream(outoutFile));
+        } catch (FileNotFoundException e) {
+            throw new ClientException("文件未找到");
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .body(resource);
     }
 
     private InferenceResp sendPostRequest(MultipartFile file) {

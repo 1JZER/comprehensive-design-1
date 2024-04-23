@@ -10,4 +10,7 @@ public interface IdentifyService{
     ResponseEntity<Resource> identify(MultipartFile file);
 
     Result listHistory();
+
+    ResponseEntity<Resource> queryHistory(String fileName);
+
 }

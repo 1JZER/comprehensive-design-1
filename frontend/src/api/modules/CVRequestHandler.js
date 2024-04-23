@@ -12,7 +12,7 @@ export default {
             }
         )
     },
-    // 查询分组集合
+    // 查询历史记录集合
     listHistory(data) {
         return http({
             url: '/listHistory',
@@ -20,5 +20,14 @@ export default {
             params: data
         })
     },
+    // 查询单个历史记录
+    queryHistory(fileName) {
+        return http({
+            url: '/queryHistory',
+            method: 'get',
+            params: fileName,
+            responseType: 'blob'
+        })
+    }
 
 }

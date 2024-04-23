@@ -29,4 +29,10 @@ public class IdentifyController {
     public Result<ListHistoryRespDTO> listHistory() {
         return identifyService.listHistory();
     }
+
+    @GetMapping("/api/comprehensive-design/admin/v1/queryHistory")
+    public ResponseEntity<Resource> queryHistory(String fileName) {
+        return identifyService.queryHistory(fileName);
+    }
+
 }
