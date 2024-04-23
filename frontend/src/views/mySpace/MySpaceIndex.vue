@@ -1,5 +1,6 @@
 <template>
   <div style="display: flex; height: 100%">
+    <!-- 左侧边栏   -->
     <div class="options-box">
       <div class="option-title flex-box">
         <div>
@@ -64,11 +65,8 @@
         <!-- 默认展示创建短链输入框和按钮 -->
         <div class="buttons-box">
           <div style="width: 100%; display: flex">
-            <!-- <el-input style="flex: 1; margin-right: 20px" placeholder="请输入http://或https://开头的连接或引用跳转程序"></el-input> -->
-            <el-button class="addButton" type="primary" style="width: 130px; margin-right: 10px"
-                       @click="isAddSmallLink = true">上传图片
-            </el-button>
-            <el-button style="width: 130px; margin-right: 10px" @click="isAddSmallLinks = true">下载图片</el-button>
+            <input type="file" @change="handleFileUpload" id="file" style="display: none;"/>
+            <el-button type="primary" @click="triggerFileInput">选择文件</el-button>
           </div>
         </div>
 
@@ -78,104 +76,20 @@
           <!-- 数据为空时展示的内容 -->
           <template #empty>
             <div style="height: 60vh; display: flex; align-items: center; justify-content: center">
-              <img
-                  src="https://www.zuel.edu.cn/_upload/article/images/34/60/09304aac44298cde84073a3bc76c/e93480d7-6e18-4ae8-8e20-8e7c4bd4fc79_s.jpg"
-                  alt="描述信息">
+              <img  :src="imageUrl" alt="描述信息">
             </div>
           </template>
         </el-table>
 
-        <!-- 分页器 -->
-        <div class="pagination-block">
-          <el-pagination v-model:current-page="pageParams.current" v-model:page-size="pageParams.size"
-                         :page-sizes="[10, 15, 20, 30]" layout="total, sizes, prev, pager, next, jumper"
-                         :total="totalNums"
-                         @size-change="handleSizeChange" @current-change="handleCurrentChange"/>
-        </div>
       </div>
     </div>
-    <!-- 查看数据弹框 -->
-    <ChartsInfo style="width: 880px" ref="chartsInfoRef" :title="chartsInfoTitle" :info="chartsInfo"
-                :tableInfo="tableInfo" :isGroup="isGroup" :nums="nums" :favicon="favicon1" :originUrl="originUrl1"
-                @changeTime="changeTime" @changePage="changePage" top="60px"></ChartsInfo>
-    <!-- 新建分组弹框 -->
-    <el-dialog v-model="isAddGroup" title="新建短链接分组" style="width: 40%">
-      <el-form :model="form">
-        <el-form-item label="分组名称：" :label-width="formLabelWidth">
-          <el-input autocomplete="off" v-model="newGroupName"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="isAddGroup = false">取消</el-button>
-          <el-button type="primary" @click="addGroup" :disabled="addGroupLoading"> 确认 </el-button>
-        </span>
-      </template>
-    </el-dialog>
-    <!-- 编辑分组弹框 -->
-    <el-dialog v-model="isEditGroup" title="编辑短链接分组" style="width: 40%">
-      <el-form :model="form">
-        <el-form-item label="分组名称：" :label-width="formLabelWidth">
-          <el-input autocomplete="off" v-model="editGroupName"/>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <span class="dialog-footer">
-          <el-button @click="isEditGroup = false">取消</el-button>
-          <el-button type="primary" @click="editGroup" :disabled="editGroupLoading">
-            确认
-          </el-button>
-        </span>
-      </template>
-    </el-dialog>
-    <!-- 创建短链弹框 -->
-    <el-dialog @close="afterAddLink" v-model="isAddSmallLink" title="创建链接">
-      <el-tabs class="demo-tabs">
-        <el-tab-pane>
-          <template #label>
-            <span class="custom-tabs-label">
-              <el-icon>
-                <Link/>
-              </el-icon>
-              <span>普通跳转</span>
-            </span>
-          </template>
-          <CreateLink ref="createLink1Ref" :groupInfo="editableTabs" @onSubmit="addLink" @cancel="cancelAddLink"
-                      :defaultGid="pageParams.gid" :is-single="true"></CreateLink>
-        </el-tab-pane>
-        <el-tab-pane>
-          <template #label>
-            <span class="custom-tabs-label">
-              <el-icon>
-                <Connection/>
-              </el-icon>
-              <span>随机跳转</span>
-            </span></template>
-          暂未开发
-        </el-tab-pane>
-      </el-tabs>
-    </el-dialog>
-    <!-- 修改短链信息弹框 -->
-    <el-dialog @close="afterAddLink" v-model="isEditLink" title="编辑链接">
-      <EditLink ref="editLinkRef" :editData="editData" :groupInfo="editableTabs" @onSubmit="coverEditLink"
-                @updatePage="updatePage" @cancel="coverEditLink"></EditLink>
-    </el-dialog>
-    <!-- 批量创建短链弹框 -->
-    <el-dialog @close="afterAddLink" v-model="isAddSmallLinks" title="批量链接">
-      <CreateLinks ref="createLink2Ref" :groupInfo="editableTabs" @onSubmit="addLink" @cancel="cancelAddLink"
-                   :defaultGid="pageParams.gid"></CreateLinks>
-    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import {getCurrentInstance, onMounted, reactive, ref, watch} from 'vue'
 import Sortable from 'sortablejs'
-import ChartsInfo from './components/chartsInfo/ChartsInfo.vue'
-import CreateLink from './components/createLink/CreateLink.vue'
-import CreateLinks from './components/createLink/CreateLinks.vue'
 import {getLastWeekFormatDate, getTodayFormatDate} from '@/utils/plugins.js'
-import EditLink from './components/editLink/EditLink.vue'
 import {ElMessage} from 'element-plus'
 import defaultImg from '@/assets/png/短链默认图标.png'
 
@@ -520,9 +434,39 @@ const editGroup = async () => {
   isEditGroup.value = false
   editGroupLoading.value = false
 }
+
+
+const imageUrl = ref('');
+
+
+// 处理图片上传
+const triggerFileInput = () => {
+  document.getElementById('file').click()
+}
+const handleFileUpload = async (event) => {
+  const fileInput = event.target;
+  const file = event.target.files[0];
+  if (!file) return;
+  try {
+    const response = await API.CVRequestHandler.uploadFile(file);
+    // 处理上传成功后的逻辑
+    console.log("上传成功", response.data);
+    imageUrl.value = URL.createObjectURL(response.data); // 直接使用 response.data，它是一个 Blob 对象
+
+  } catch (error) {
+    console.error("上传失败", error);
+    // 处理上传失败后的逻辑
+  } finally {
+    // 清除 file input 以便再次上传
+    fileInput.value = '';
+  }
+}
+
+
 // 创建短链
 const isAddSmallLink = ref(false)
 const isAddSmallLinks = ref(false)
+
 // 关闭新建短链接弹窗
 const addLink = () => {
   isAddSmallLink.value = false
