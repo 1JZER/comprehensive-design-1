@@ -1,9 +1,12 @@
 package com.zuel.controller;
 
+import com.zuel.convention.result.Result;
+import com.zuel.dto.resp.ListHistoryRespDTO;
 import com.zuel.service.IdentifyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -20,5 +23,10 @@ public class IdentifyController {
     @PostMapping("/api/comprehensive-design/admin/v1/doIdentify")
     public ResponseEntity<Resource> identify(@RequestParam("file") MultipartFile file) {
         return identifyService.identify(file);
+    }
+
+    @GetMapping("/api/comprehensive-design/admin/v1/listHistory")
+    public Result<ListHistoryRespDTO> listHistory() {
+        return identifyService.listHistory();
     }
 }

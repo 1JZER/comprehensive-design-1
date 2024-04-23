@@ -1,8 +1,17 @@
 package com.zuel.service.impl;
 
 import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.zuel.common.biz.user.UserContext;
 import com.zuel.common.exception.ClientException;
+import com.zuel.convention.result.Result;
+import com.zuel.convention.result.Results;
+import com.zuel.dao.entity.HistoryDO;
+import com.zuel.dao.mapper.HistoryMapper;
+import com.zuel.dto.biz.History;
 import com.zuel.dto.biz.InferenceResp;
+import com.zuel.dto.resp.ListHistoryRespDTO;
 import com.zuel.service.IdentifyService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,10 +37,12 @@ import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-public class IdentifyServiceImpl implements IdentifyService {
+public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> implements IdentifyService {
 
+
+    private final HistoryMapper historyMapper;
     @Value("${img-storage-path}")
-    String outputImagePath;
+    private String outputImagePath;
     @Value("${inference-ip}")        // TODO，为什么@Value不适用于final字段
     private String inferenceIp;
 
@@ -40,19 +51,24 @@ public class IdentifyServiceImpl implements IdentifyService {
         if (file.isEmpty()) {
             throw new ClientException("文件不能为空");
         }
-
         try {
             InferenceResp inferResp = sendPostRequest(file);
-
             BufferedImage image = null;
             image = ImageIO.read(file.getInputStream());
             BufferedImage imageWithBox = drawBoundingBoxes(image, inferResp);
-            // 保存文件
-            String fileName = UUID.randomUUID().toString();
-            File outoutFile = new File(outputImagePath + "/" + fileName + ".png");
 
+            // 保存文件
+            String fileName = UUID.randomUUID() + ".png";
+            File outoutFile = new File(outputImagePath + "/" + fileName);
             // TODO 此处可异步执行？
             ImageIO.write(imageWithBox, "PNG", outoutFile);
+
+            // 文件入库
+            HistoryDO historyDO = new HistoryDO();
+            historyDO.setUsername(UserContext.getUsername())
+                    .setImgName(fileName);     // TODO: 获取主题
+            save(historyDO);
+
             InputStreamResource resource = new InputStreamResource(new FileInputStream(outoutFile));
 
             return ResponseEntity.ok()
@@ -61,6 +77,18 @@ public class IdentifyServiceImpl implements IdentifyService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    @Override
+    public Result<ListHistoryRespDTO> listHistory() {
+        LambdaQueryWrapper<HistoryDO> lambdaQueryWrapper = new LambdaQueryWrapper<HistoryDO>()
+                .eq(HistoryDO::getUsername, UserContext.getUsername())
+                .orderByDesc(HistoryDO::getCreateTime);
+        List<HistoryDO> histories = historyMapper.selectList(lambdaQueryWrapper);
+        List<History> res = histories.stream().map((item) -> new History().setTopic(item.getTopic())).toList();
+        ListHistoryRespDTO listHistoryRespDTO = new ListHistoryRespDTO();
+        listHistoryRespDTO.setHistoryRespList(res);
+        return Results.success(listHistoryRespDTO);
     }
 
     private InferenceResp sendPostRequest(MultipartFile file) {
