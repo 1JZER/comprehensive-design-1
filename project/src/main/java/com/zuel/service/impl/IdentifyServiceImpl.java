@@ -24,11 +24,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class IdentifyServiceImpl implements IdentifyService {
 
+    @Value("${img-storage-path}")
+    String outputImagePath;
     @Value("${inference-ip}")        // TODO，为什么@Value不适用于final字段
     private String inferenceIp;
 
@@ -39,14 +42,18 @@ public class IdentifyServiceImpl implements IdentifyService {
         }
 
         try {
-//            String body = resp.body();
-//            InferenceResp inferResp = JSONUtil.toBean(body, InferenceResp.class);
             InferenceResp inferResp = sendPostRequest(file);
 
             BufferedImage image = null;
             image = ImageIO.read(file.getInputStream());
-            File imageWithBox = drawBoundingBoxes(image, inferResp);
-            InputStreamResource resource = new InputStreamResource(new FileInputStream(imageWithBox));
+            BufferedImage imageWithBox = drawBoundingBoxes(image, inferResp);
+            // 保存文件
+            String fileName = UUID.randomUUID().toString();
+            File outoutFile = new File(outputImagePath + "/" + fileName + ".png");
+
+            // TODO 此处可异步执行？
+            ImageIO.write(imageWithBox, "PNG", outoutFile);
+            InputStreamResource resource = new InputStreamResource(new FileInputStream(outoutFile));
 
             return ResponseEntity.ok()
                     .contentType(MediaType.IMAGE_PNG)
@@ -95,7 +102,7 @@ public class IdentifyServiceImpl implements IdentifyService {
     }
 
 
-    private File drawBoundingBoxes(BufferedImage image, InferenceResp result) {
+    private BufferedImage drawBoundingBoxes(BufferedImage image, InferenceResp result) {
         // 获取图像的图形上下文
         Graphics2D graphics = image.createGraphics();
         graphics.setColor(Color.RED); // 设置边界框颜色为红色
@@ -112,15 +119,7 @@ public class IdentifyServiceImpl implements IdentifyService {
             }
         }
         graphics.dispose(); // 释放资源
-        String outputImagePath = "/Users/bayern2jz/Desktop/res.png";
-        // 保存处理后的图像
-        File outputFile = new File(outputImagePath);
-        try {
-            ImageIO.write(image, "PNG", outputFile);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return outputFile;
+        return image;
     }
 
 }
