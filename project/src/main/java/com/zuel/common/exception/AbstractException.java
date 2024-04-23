@@ -1,6 +1,7 @@
 package com.zuel.common.exception;
 
 import com.zuel.common.errorcode.IErrorCode;
+import lombok.Getter;
 import org.springframework.util.StringUtils;
 
 import java.util.Optional;
@@ -13,6 +14,7 @@ import java.util.Optional;
  * @see RemoteException
  */
 
+@Getter
 public abstract class AbstractException extends RuntimeException {
     public final String errorCode;
 
