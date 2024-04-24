@@ -1,6 +1,7 @@
 package com.zuel.controller;
 
 import com.zuel.convention.result.Result;
+import com.zuel.convention.result.Results;
 import com.zuel.dto.resp.ListHistoryRespDTO;
 import com.zuel.service.IdentifyService;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +28,7 @@ public class IdentifyController {
 
     @GetMapping("/api/comprehensive-design/admin/v1/listHistory")
     public Result<ListHistoryRespDTO> listHistory() {
-        return identifyService.listHistory();
+        return Results.success(identifyService.listHistory());
     }
 
     @GetMapping("/api/comprehensive-design/admin/v1/queryHistory")

@@ -4,9 +4,8 @@ import cn.hutool.json.JSONUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.zuel.common.biz.user.UserContext;
+import com.zuel.common.constant.Id2Label;
 import com.zuel.common.exception.ClientException;
-import com.zuel.convention.result.Result;
-import com.zuel.convention.result.Results;
 import com.zuel.dao.entity.HistoryDO;
 import com.zuel.dao.mapper.HistoryMapper;
 import com.zuel.dto.biz.History;
@@ -47,6 +46,8 @@ public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> i
     @Value("${inference-ip}")        // TODO，为什么@Value不适用于final字段
     private String inferenceIp;
 
+    private final Id2Label id2Label;
+
     @Override
     public ResponseEntity<Resource> identify(MultipartFile file) {
         if (file.isEmpty()) {
@@ -82,7 +83,7 @@ public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> i
     }
 
     @Override
-    public Result<ListHistoryRespDTO> listHistory() {
+    public ListHistoryRespDTO listHistory() {
         LambdaQueryWrapper<HistoryDO> lambdaQueryWrapper = new LambdaQueryWrapper<HistoryDO>()
                 .eq(HistoryDO::getUsername, UserContext.getUsername())
                 .orderByDesc(HistoryDO::getCreateTime);
@@ -90,7 +91,7 @@ public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> i
         List<History> res = histories.stream().map((item) -> new History().setTopic(item.getTopic()).setImg_name(item.getImgName())).toList();
         ListHistoryRespDTO listHistoryRespDTO = new ListHistoryRespDTO();
         listHistoryRespDTO.setHistoryList(res);
-        return Results.success(listHistoryRespDTO);
+        return listHistoryRespDTO;
     }
 
     @Override
@@ -152,17 +153,26 @@ public class IdentifyServiceImpl extends ServiceImpl<HistoryMapper, HistoryDO> i
         Graphics2D graphics = image.createGraphics();
         graphics.setColor(Color.RED); // 设置边界框颜色为红色
         graphics.setStroke(new BasicStroke(2)); // 设置边界框的线宽
+        graphics.setFont(new Font("Arial", Font.BOLD, 20)); // 设置标签字体
 
-        // 绘制边界框
-        for (List<List<Double>> objectBoxes : result.getBoxes()) {
-            for (List<Double> box : objectBoxes) {
+        // 绘制边界框和标签
+        for (int i = 0; i < result.getBoxes().size(); i++) {
+            List<List<Double>> objectBoxes = result.getBoxes().get(i);
+            List<String> objectLabels = result.getLabels().get(i);  // 获取当前框的所有标签
+            for (int j = 0; j < objectBoxes.size(); j++) {
+                List<Double> box = objectBoxes.get(j);
                 int x = box.get(0).intValue();
                 int y = box.get(1).intValue();
                 int width = (int) (box.get(2) - box.get(0));
                 int height = (int) (box.get(3) - box.get(1));
                 graphics.drawRect(x, y, width, height);
+                // 绘制标签
+                String labelNum = objectLabels.get(j);  // 直接获取字符串类型的标签
+                String label = id2Label.convert((int)Double.parseDouble(labelNum));
+                graphics.drawString(label, x, y - 5); // 在框的上方5像素处绘制标签
             }
         }
+
         graphics.dispose(); // 释放资源
         return image;
     }
